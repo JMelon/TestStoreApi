@@ -11,6 +11,7 @@ const port = 3000;
 app.use(bodyParser.json());
 
 const ADAPTER_API_URL = process.env.ADAPTER_API_URL || 'http://localhost:4000';
+global.checkoutCompleted = {};
 
 const generateDynamicToken = (username) => {
   const currentDate = new Date().toISOString().slice(0, 10);
@@ -39,6 +40,21 @@ const swaggerOptions = {
       description: 'API documentation for the Backend service (storefront)',
     },
     servers: [{ url: 'http://localhost:3000' }],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+        XUser: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'X-User',
+          description: 'Custom header for user identification - username',
+        }
+      },
+    },
   },
   apis: ['./index.js'],
 };
@@ -199,6 +215,7 @@ app.get('/items/:id', async (req, res) => {
  *     description: Requires authentication.
  *     security:
  *       - bearerAuth: []
+ *       - XUser: []
  *     requestBody:
  *       required: true
  *       content:
@@ -234,12 +251,91 @@ app.post('/cart', authMiddleware, (req, res) => {
 
 /**
  * @swagger
+ * /cart/items:
+ *   get:
+ *     summary: Get the list of items in the cart.
+ *     description: Requires authentication.
+ *     security:
+ *       - bearerAuth: []
+ *       - XUser: []
+ *     responses:
+ *       200:
+ *         description: List of items in the cart.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   itemId:
+ *                     type: string
+ *                     description: The ID of the item.
+ *                   quantity:
+ *                     type: integer
+ *                     description: The quantity of the item.
+ *       401:
+ *         description: Missing or invalid authentication.
+ *       500:
+ *         description: Internal server error.
+ */
+app.get('/cart/items', authMiddleware, (req, res) => {
+  const cart = global.carts[req.username] || [];
+  res.json(cart);
+});
+
+/**
+ * @swagger
+ * /cart/items:
+ *   delete:
+ *     summary: Delete an item from the cart.
+ *     description: Requires authentication.
+ *     security:
+ *       - bearerAuth: []
+ *       - XUser: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               itemId:
+ *                 type: string
+ *                 description: The ID of the item to delete.
+ *     responses:
+ *       200:
+ *         description: Item deleted from the cart.
+ *       400:
+ *         description: Item not found in the cart.
+ *       401:
+ *         description: Missing or invalid authentication.
+ *       500:
+ *         description: Internal server error.
+ */
+app.delete('/cart/items', authMiddleware, (req, res) => {
+  const { itemId } = req.body;
+  const cart = global.carts[req.username] || [];
+  const itemIndex = cart.findIndex(item => item.itemId === itemId);
+
+  if (itemIndex === -1) {
+    return res.status(400).json({ error: 'Item not found in the cart' });
+  }
+
+  cart.splice(itemIndex, 1);
+  global.carts[req.username] = cart;
+  res.json({ message: 'Item deleted from the cart', cart });
+});
+
+/**
+ * @swagger
  * /checkout:
  *   post:
  *     summary: Checkout the shopping cart.
- *     description: Requires authentication. Processes checkout and clears the cart.
+ *     description: Requires authentication. Processes checkout and and prepares for payment.
  *     security:
  *       - bearerAuth: []
+ *       - XUser: []
  *     responses:
  *       200:
  *         description: Checkout successful.
@@ -254,7 +350,8 @@ app.post('/checkout', authMiddleware, (req, res) => {
   if (!global.carts || !global.carts[req.username] || global.carts[req.username].length === 0)
     return res.status(400).json({ error: 'Cart is empty' });
   global.carts[req.username] = [];
-  res.json({ message: 'Checkout successful. Payment processed.' });
+  global.checkoutCompleted[req.username] = true;
+  res.json({ message: 'Checkout successful. Ready for payment.' });
 });
 
 /**
@@ -265,16 +362,25 @@ app.post('/checkout', authMiddleware, (req, res) => {
  *     description: Requires authentication.
  *     security:
  *       - bearerAuth: []
+ *       - XUser: []
  *     responses:
  *       200:
  *         description: Payment processed successfully.
+ *       400:
+ *         description: Checkout not completed.
  *       401:
  *         description: Missing or invalid authentication.
  *       500:
  *         description: Internal server error.
  */
 app.post('/payment', authMiddleware, (req, res) => {
-  res.json({ message: 'Payment processed successfully (simulated).' });
+  if (!global.checkoutCompleted[req.username]) {
+    return res.status(400).json({ error: 'Checkout not completed' });
+  }
+
+  // Process payment logic here
+  global.checkoutCompleted[req.username] = false; // Reset checkout flag after payment
+  res.json({ message: 'Payment successful' });
 });
 
 app.use((err, req, res, next) => {

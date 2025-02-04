@@ -3,8 +3,51 @@
 A microservices-based e-commerce system with separate APIs for storefront, management, and data access layers. This is purely for testing purposes only!
 
 ## System Architecture
+The system consists of three main APIs and a PostgreSQL database.
 
-The system consists of three main APIs and a PostgreSQL database:
+```mermaid
+graph TD
+    subgraph PostgreSQL Database
+        DB[(PostgreSQL)]
+    end
+
+    subgraph Backend API
+        BAPI[Backend API]
+    end
+
+    subgraph Management API
+        MAPI[Management API]
+    end
+
+    subgraph Adapter API
+        AAPI[Adapter API]
+    end
+
+    User[User]
+    Admin[Admin]
+
+    User -->|View Catalog| BAPI
+    User -->|Authenticate| BAPI
+    User -->|Purchase| BAPI
+    Admin -->|Authenticate| BAPI
+    Admin -->|Manage Users| MAPI
+    Admin -->|Manage Catalog| MAPI
+    BAPI <-->|HTTP| AAPI
+    MAPI <-->|HTTP| AAPI
+    AAPI <-->|SQL| DB
+
+    classDef userStyle fill:#b3cde0,stroke:#333,stroke-width:2px;
+    classDef adminStyle fill:#fbb4ae,stroke:#333,stroke-width:2px;
+    classDef apiStyle fill:#ccebc5,stroke:#333,stroke-width:2px;
+    classDef dbStyle fill:#decbe4,stroke:#333,stroke-width:2px;
+
+    User:::userStyle
+    Admin:::adminStyle
+    BAPI:::apiStyle
+    MAPI:::apiStyle
+    AAPI:::apiStyle
+    DB:::dbStyle
+```
 
 1. **Backend API** (Port 3000)
    - Customer-facing storefront API
@@ -61,12 +104,17 @@ docker compose down -v
 docker compose up --build
 ```
 
-
 3. Access the APIs:
 - Backend API: http://localhost:3000
 - Management API: http://localhost:3500
 
 Note: The Adapter API (Port 4000) is only accessible internally within the Docker network and is not exposed to the host machine.
+
+To quickly start testing, you can use the following users:
+| ID | Username  | First Name | Last Name | Role  | Password  |
+|----|-----------|------------|-----------|-------|-----------|
+| 1  | jdoe123   | John       | Doe       | admin | jdoe@123  |
+| 2  | asmith456 | Alice      | Smith     | user  | asmith@456|
 
 ## API Documentation
 
@@ -158,6 +206,11 @@ node generateCatalog.js
 6. Checkout with invalid token returns 401
 7. Checkout with expired token returns 401
 8. Checkout without adding to cart returns error
+9. Get items in cart returns correct list of items previously added to cart
+10. Users can't see items in other users carts
+11. Items can be deleted from cart
+12. Delete non-existent item from cart returns 400
+13. Payment can't be completed without checkout first
 
 ### Admin Management Tests
 1. Admin can create new product

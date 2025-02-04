@@ -31,8 +31,14 @@ const swaggerOptions = {
         bearerAuth: {
           type: 'http',
           scheme: 'bearer',
-          bearerFormat: 'JWT', // Optional: indicates the format (e.g., JWT)
+          bearerFormat: 'JWT',
         },
+        XUser: {
+          type: 'apiKey',
+          in: 'header',
+          name: 'X-User',
+          description: 'Custom header for user identification - username',
+        }
       },
     },
   },
@@ -124,6 +130,9 @@ const forwardRequest = async (method, endpoint, req, res, { notFoundMsg, fallbac
  * /users:
  *   get:
  *     summary: Retrieve a list of users.
+ *     security:
+ *       - bearerAuth: []
+ *       - XUser: []
  *     responses:
  *       200:
  *         description: A list of users.
@@ -139,6 +148,9 @@ app.get('/users', (req, res) =>
  * /users/{id}:
  *   get:
  *     summary: Retrieve a user by ID.
+ *     security:
+ *       - bearerAuth: []
+ *       - XUser: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -166,6 +178,9 @@ app.get('/users/:id', (req, res) =>
  * /users:
  *   post:
  *     summary: Create a new user.
+ *     security:
+ *       - bearerAuth: []
+ *       - XUser: []
  *     requestBody:
  *       required: true
  *       content:
@@ -206,6 +221,9 @@ app.post('/users', (req, res) =>
  * /users/{id}:
  *   put:
  *     summary: Update an existing user.
+ *     security:
+ *       - bearerAuth: []
+ *       - XUser: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -250,6 +268,9 @@ app.put('/users/:id', (req, res) =>
  * /users/{id}:
  *   delete:
  *     summary: Delete a user.
+ *     security:
+ *       - bearerAuth: []
+ *       - XUser: []
  *     deprecated: true
  *     parameters:
  *       - in: path
@@ -283,6 +304,9 @@ app.put('/users/:id', (req, res) =>
  * /items:
  *   post:
  *     summary: Create a new item.
+ *     security:
+ *       - bearerAuth: []
+ *       - XUser: []
  *     requestBody:
  *       required: true
  *       content:
@@ -312,6 +336,9 @@ app.post('/items', (req, res) =>
  *   post:
  *     summary: Create multiple items at once.
  *     description: Forwards an array of items to the Adapter API for batch creation.
+ *     security:
+ *       - bearerAuth: []
+ *       - XUser: []
  *     requestBody:
  *       required: true
  *       content:
@@ -350,6 +377,9 @@ app.post('/items/batch', (req, res) =>
  * /items/{id}:
  *   put:
  *     summary: Update an existing item.
+ *     security:
+ *       - bearerAuth: []
+ *       - XUser: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -390,6 +420,9 @@ app.put('/items/:id', (req, res) =>
  * /items/{id}:
  *   delete:
  *     summary: Delete an item.
+ *     security:
+ *       - bearerAuth: []
+ *       - XUser: []
  *     deprecated: true
  *     parameters:
  *       - in: path
