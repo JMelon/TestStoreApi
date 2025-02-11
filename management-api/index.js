@@ -447,6 +447,16 @@ app.put('/items/:id', (req, res) =>
 );
  */
 
+// Middleware to handle unsupported methods
+app.use((req, res, next) => {
+  res.status(405).json({ error: 'Method Not Allowed' });
+});
+
+// Middleware to handle invalid endpoints
+app.use((req, res, next) => {
+  res.status(404).json({ error: 'Endpoint Not Found' });
+});
+
 // Global error-handling middleware (catch-all)
 app.use((err, req, res, next) => {
   console.error('Unhandled error in Management API:', err);

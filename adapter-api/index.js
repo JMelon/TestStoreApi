@@ -193,7 +193,8 @@ app.get('/items', async (req, res) => {
   try {
     let { page, limit } = req.query;
     page = parseInt(page) || 1;
-    limit = Math.min(parseInt(limit) || 10, 1000);
+    limit = parseInt(limit);
+    limit = isNaN(limit) ? 10 : Math.min(limit, 1000);
     const offset = (page - 1) * limit;
 
     const totalResult = await pool.query('SELECT COUNT(*) FROM items');

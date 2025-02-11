@@ -190,6 +190,12 @@ node generateCatalog.js
 4. Expired token returns 401
 5. Missing token returns 401
 
+### Registration Tests
+1. Valid user registration returns 201
+2. Registration with missing fields returns 400
+3. Registration with existing username returns 500
+4. Registration with invalid data format returns 400
+
 ### Product Catalog Tests
 1. Get products returns paginated results
 2. Product listing returns all available products

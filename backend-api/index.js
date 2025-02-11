@@ -64,6 +64,54 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 /**
  * @swagger
+ * /register:
+ *   post:
+ *     summary: Register new user.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - firstname
+ *               - surname
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *               firstname:
+ *                 type: string
+ *               surname:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: User registered successfully.
+ *       400:
+ *         description: Bad request. Missing or invalid fields.
+ *       500:
+ *         description: Internal server error.
+ */
+app.post('/register', async (req, res) => {
+  try {
+    const { username, firstname, surname, password } = req.body;
+    if (!username || !firstname || !surname || !password)
+      return res.status(400).json({ error: 'Username, firstname, surname and password are required' });
+
+    const userData = { username, role: 'user', firstname, surname, password };
+    const response = await axios({ method: 'post', url: `${ADAPTER_API_URL}/users`, data: userData });
+    res.status(response.status).json(response.data);
+
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error', message: error.response.data });
+  }
+});
+
+/**
+ * @swagger
  * /login:
  *   post:
  *     summary: Login to the storefront.
@@ -240,12 +288,30 @@ app.get('/items/:id', async (req, res) => {
  *         description: Internal server error.
  */
 app.post('/cart', authMiddleware, (req, res) => {
-  const { itemId, quantity } = req.body;
-  if (!itemId || !quantity)
+  let { itemId, quantity } = req.body;
+
+  if (typeof itemId === 'string' && !isNaN(itemId)) {
+    itemId = parseInt(itemId, 10);
+  }
+
+  if (typeof quantity === 'string' && !isNaN(quantity)) {
+    quantity = parseInt(quantity, 10);
+  }
+
+  if (!itemId || !quantity) {
     return res.status(400).json({ error: 'Item ID and quantity are required' });
+  }
+  if (!Number.isInteger(itemId) || itemId <= 0) {
+    return res.status(400).json({ error: 'Invalid item ID, must be a positive integer' });
+  }
+  if (!Number.isInteger(quantity) || quantity <= 0) {
+    return res.status(400).json({ error: 'Invalid quantity, must be a positive integer' });
+  }
+
   global.carts = global.carts || {};
   global.carts[req.username] = global.carts[req.username] || [];
   global.carts[req.username].push({ itemId, quantity });
+
   res.json({ message: 'Item added to cart', cart: global.carts[req.username] });
 });
 
@@ -281,7 +347,13 @@ app.post('/cart', authMiddleware, (req, res) => {
  */
 app.get('/cart/items', authMiddleware, (req, res) => {
   const cart = global.carts[req.username] || [];
-  res.json(cart);
+
+  const parsedCart = cart.map(item => ({
+    itemId: parseInt(item.itemId, 10),
+    quantity: parseInt(item.quantity, 10)
+  }));
+
+  res.json(parsedCart);
 });
 
 /**
@@ -314,17 +386,30 @@ app.get('/cart/items', authMiddleware, (req, res) => {
  *         description: Internal server error.
  */
 app.delete('/cart/items', authMiddleware, (req, res) => {
-  const { itemId } = req.body;
+  let { itemId } = req.body;
+
+  if (typeof itemId === 'string' && !isNaN(itemId)) {
+      itemId = parseInt(itemId, 10);
+  }
+
+  if (!Number.isInteger(itemId) || itemId <= 0) {
+      return res.status(400).json({ error: 'Invalid item ID, must be a positive integer' });
+  }
+
   const cart = global.carts[req.username] || [];
-  const itemIndex = cart.findIndex(item => item.itemId === itemId);
+  
+  const itemIndex = cart.findIndex(item => Number(item.itemId) === itemId);
 
   if (itemIndex === -1) {
-    return res.status(400).json({ error: 'Item not found in the cart' });
+      return res.status(400).json({ error: 'Item not found in the cart' });
   }
+
+  const deletedItem = cart[itemIndex];
 
   cart.splice(itemIndex, 1);
   global.carts[req.username] = cart;
-  res.json({ message: 'Item deleted from the cart', cart });
+
+  res.json({ message: 'Item deleted from the cart', deletedItem });
 });
 
 /**
@@ -381,6 +466,16 @@ app.post('/payment', authMiddleware, (req, res) => {
   // Process payment logic here
   global.checkoutCompleted[req.username] = false; // Reset checkout flag after payment
   res.json({ message: 'Payment successful' });
+});
+
+// Middleware to handle unsupported methods
+app.use((req, res, next) => {
+  res.status(405).json({ error: 'Method Not Allowed' });
+});
+
+// Middleware to handle invalid endpoints
+app.use((req, res, next) => {
+  res.status(404).json({ error: 'Endpoint Not Found' });
 });
 
 app.use((err, req, res, next) => {
