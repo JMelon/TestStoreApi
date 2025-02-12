@@ -259,8 +259,8 @@ app.get('/items/:id', async (req, res) => {
  * @swagger
  * /cart:
  *   post:
- *     summary: Add an item to the shopping cart.
- *     description: Requires authentication.
+ *     summary: Add an item to the cart.
+ *     description: Requires authentication. Validates item existence before adding.
  *     security:
  *       - bearerAuth: []
  *       - XUser: []
@@ -279,15 +279,17 @@ app.get('/items/:id', async (req, res) => {
  *                 example: 2
  *     responses:
  *       200:
- *         description: Item added to cart.
+ *         description: Item added successfully.
  *       400:
- *         description: Missing itemId or quantity.
+ *         description: Invalid or missing parameters.
+ *       404:
+ *         description: Item not found.
  *       401:
- *         description: Missing or invalid authentication.
+ *         description: Unauthorized request.
  *       500:
- *         description: Internal server error.
+ *         description: Server error.
  */
-app.post('/cart', authMiddleware, (req, res) => {
+app.post('/cart', authMiddleware, async (req, res) => {
   let { itemId, quantity } = req.body;
 
   if (typeof itemId === 'string' && !isNaN(itemId)) {
@@ -308,11 +310,26 @@ app.post('/cart', authMiddleware, (req, res) => {
     return res.status(400).json({ error: 'Invalid quantity, must be a positive integer' });
   }
 
-  global.carts = global.carts || {};
-  global.carts[req.username] = global.carts[req.username] || [];
-  global.carts[req.username].push({ itemId, quantity });
+  try {
+    const itemResponse = await axios.get(`${ADAPTER_API_URL}/items/${itemId}`);
 
-  res.json({ message: 'Item added to cart', cart: global.carts[req.username] });
+    if (!itemResponse || !itemResponse.data) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    global.carts = global.carts || {};
+    global.carts[req.username] = global.carts[req.username] || [];
+    global.carts[req.username].push({ itemId, quantity });
+
+    res.json({ message: 'Item added to cart', cart: global.carts[req.username] });
+
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    console.error('Error checking item:', error.message);
+    res.status(500).json({ error: 'Internal server error while validating item' });
+  }
 });
 
 /**
