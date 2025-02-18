@@ -13,22 +13,29 @@ app.use(bodyParser.json());
 const ADAPTER_API_URL = process.env.ADAPTER_API_URL || 'http://localhost:4000';
 global.checkoutCompleted = {};
 
-const generateDynamicToken = (username) => {
-  const currentDate = new Date().toISOString().slice(0, 10);
-  const secret = process.env.TOKEN_SECRET || 'default_secret';
-  return crypto.createHash('sha256').update(username + currentDate + secret).digest('hex');
-};
-
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const username = req.headers['x-user'];
   if (!authHeader || !username)
     return res.status(401).json({ error: 'Missing Authorization or X-User header' });
+
   const providedToken = authHeader.split(' ')[1];
-  if (providedToken !== generateDynamicToken(username))
-    return res.status(403).json({ error: 'Invalid or expired token' });
-  req.username = username;
-  next();
+
+  try {
+    const response = await axios.post(`${ADAPTER_API_URL}/verify-token`, {
+      username,
+      token: providedToken
+    });
+
+    if (response.data.valid) {
+      req.username = username;
+      next();
+    } else {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+  } catch (error) {
+    return res.status(500).json({ error: 'Internal server error', message: error.message });
+  }
 };
 
 const swaggerOptions = {

@@ -181,6 +181,34 @@ npm install
 node generateCatalog.js
 ```
 
+## Using Mocking
+This guide explains how to set up and use mocking for this project using Docker Compose. The `docker-compose-mock.yml` file is configured to use Wiremock to mock the adapter-api service.
+
+#### Steps to Use Mocking
+
+1. **Build and Start the Services:**
+```bash
+docker-compose -f docker-compose-mock.yml up --build
+```
+
+2. **Access the APIs:**
+- Backend API: http://localhost:3000
+- Management API: http://localhost:3500
+- Wiremock Server: http://localhost:8080
+
+3. **Push created stubs to wiremock using REST API.** https://wiremock.org/docs/standalone/admin-api-reference/
+
+4. Verify Mocking:
+- Ensure that the `backend-api` and `management-api` services are correctly redirecting their connections to the wiremock by checking the logs and responses.
+
+5. **Use Backend API or Management API** - all Adapter API requests are now returned by wiremock.
+
+#### Clearing up the date
+To stop the services and run:
+```bash
+docker-compose -f docker-compose-mock.yml down -v
+```
+
 ## Possible Test Ideas
 
 ### Authentication Tests

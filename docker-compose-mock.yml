@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: store_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  adapter-api:
+    build: ./adapter-api
+    environment:
+      PGHOST: postgres
+      PGUSER: postgres
+      PGPASSWORD: password
+      PGDATABASE: store_db
+      PGPORT: 5432
+      TOKEN_SECRET: "mySuperSecretKey"
+    expose:
+      - "4000"
+    depends_on:
+      - postgres
+
+  wiremock:
+    image: wiremock/wiremock:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./extensions:/var/wiremock/extensions
+    command:
+      - "--global-response-templating"
+      - "--verbose"
+    depends_on:
+      - adapter-api
+
+  backend-api:
+    build: ./backend-api
+    environment:
+      ADAPTER_API_URL: "http://wiremock:8080"
+      TOKEN_SECRET: "mySuperSecretKey"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - wiremock
+
+  management-api:
+    build: ./management-api
+    environment:
+      ADAPTER_API_URL: "http://wiremock:8080"
+      TOKEN_SECRET: "mySuperSecretKey"
+    ports:
+      - "3500:3500"
+    depends_on:
+      - wiremock
+
+volumes:
+  pgdata:

@@ -151,6 +151,47 @@ async function initializeDatabase() {
 
 /**
  * @swagger
+ * /verify-token:
+ *   post:
+ *     summary: Verify if the token is correct.
+ *     description: Verifies the provided token and returns a boolean value.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               token:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Token verification result.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 valid:
+ *                   type: boolean
+ *       400:
+ *         description: Bad request. Missing or invalid fields.
+ */
+app.post('/verify-token', (req, res) => {
+  const { username, token } = req.body;
+  if (!username || !token) {
+    return res.status(400).json({ error: 'Username and token are required' });
+  }
+
+  const generatedToken = generateDynamicToken(username);
+  const isValid = token === generatedToken;
+  res.json({ valid: isValid });
+});
+
+/**
+ * @swagger
  * /items:
  *   get:
  *     summary: Retrieve a paginated list of items.

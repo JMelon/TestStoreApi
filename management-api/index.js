@@ -48,40 +48,31 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 /**
- * Generate a dynamic token based on the username, current date, and secret.
- */
-const generateDynamicToken = (username) => {
-  const currentDate = new Date().toISOString().slice(0, 10);
-  return crypto.createHash('sha256').update(username + currentDate + TOKEN_SECRET).digest('hex');
-};
-
-/**
  * Admin authentication middleware.
  */
 app.use(async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const username = req.headers['x-user'];
-  if (!authHeader)
-    return res.status(401).json({ error: 'Missing Authorization header' });
-
-  let response;
-  try {
-    response = await axios.post(`${ADAPTER_API_URL}/user/role`, { username });
-  } catch (error) {
-    const status = error.response?.status || 500;
-    const message =
-      status === 404 ? 'User not found' : 'Error retrieving user role';
-    return res.status(status).json({ error: message });
-  }
-
-  if (response.data.role !== 'admin')
-    return res.status(403).json({ error: 'Forbidden: Admins only' });
+  if (!authHeader || !username)
+    return res.status(401).json({ error: 'Missing Authorization or X-User header' });
 
   const providedToken = authHeader.split(' ')[1];
-  if (providedToken !== generateDynamicToken(username))
-    return res.status(403).json({ error: 'Forbidden: Invalid token' });
 
-  next();
+  try {
+    const response = await axios.post(`${ADAPTER_API_URL}/verify-token`, {
+      username,
+      token: providedToken
+    });
+
+    if (response.data.valid) {
+      req.username = username;
+      next();
+    } else {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+  } catch (error) {
+    return res.status(500).json({ error: 'Internal server error', message: error.message });
+  }
 });
 
 /**
