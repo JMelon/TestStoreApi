@@ -44,5 +44,14 @@ services:
     depends_on:
       - adapter-api
 
+  soap-service:
+    build: ./items-gateway
+    environment:
+      BACKEND_API_URL: "http://backend-api:3000"
+    ports:
+      - "5000:5000"
+    depends_on:
+      - backend-api
+
 volumes:
   pgdata:

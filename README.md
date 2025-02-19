@@ -1,9 +1,9 @@
 # E-commerce System (Test Store API)
 
-A microservices-based e-commerce system with separate APIs for storefront, management, and data access layers. This is purely for testing purposes only!
+A microservices-based e-commerce system with separate REST APIs for storefront, management, and data access layers. This is purely for testing purposes only!
 
 ## System Architecture
-The system consists of three main APIs and a PostgreSQL database.
+The system consists of three main REST APIs, a SOAP service, and a PostgreSQL database.
 
 ```mermaid
 graph TD
@@ -23,8 +23,13 @@ graph TD
         AAPI[Adapter API]
     end
 
+    subgraph SOAP Gateway
+        SOAP[Items Gateway]
+    end
+
     User[User]
     Admin[Admin]
+    SOAPClient[SOAP Client]
 
     User -->|View Catalog| BAPI
     User -->|Authenticate| BAPI
@@ -32,6 +37,8 @@ graph TD
     Admin -->|Authenticate| BAPI
     Admin -->|Manage Users| MAPI
     Admin -->|Manage Catalog| MAPI
+    SOAPClient -->|SOAP| SOAP
+    SOAP -->|HTTP| BAPI
     BAPI <-->|HTTP| AAPI
     MAPI <-->|HTTP| AAPI
     AAPI <-->|SQL| DB
@@ -40,6 +47,7 @@ graph TD
     classDef adminStyle fill:#fbb4ae,stroke:#333,stroke-width:2px;
     classDef apiStyle fill:#ccebc5,stroke:#333,stroke-width:2px;
     classDef dbStyle fill:#decbe4,stroke:#333,stroke-width:2px;
+    classDef soapStyle fill:#fed9a6,stroke:#333,stroke-width:2px;
 
     User:::userStyle
     Admin:::adminStyle
@@ -47,6 +55,8 @@ graph TD
     MAPI:::apiStyle
     AAPI:::apiStyle
     DB:::dbStyle
+    SOAP:::soapStyle
+    SOAPClient:::userStyle
 ```
 
 1. **Backend API** (Port 3000)
@@ -65,7 +75,13 @@ graph TD
    - Handles data validation and persistence
    - Not externally exposed - internal service only
 
-4. **PostgreSQL Database** (Port 5432)
+4. **Items Gateway** (Port 5000)
+   - SOAP service interface for legacy system integration
+   - Provides SOAP endpoints for item queries
+   - Converts SOAP requests to REST calls to Backend API
+   - WSDL available at http://localhost:5000/items?wsdl
+
+5. **PostgreSQL Database** (Port 5432)
    - Stores product catalog and user data
    - Persistent volume for data storage
 
@@ -79,6 +95,7 @@ graph TD
 - Data seeding with realistic product data
 - Docker containerization
 - Microservices architecture
+- SOAP interface for legacy system integration
 
 ## Prerequisites
 
@@ -107,6 +124,7 @@ docker compose up --build
 3. Access the APIs:
 - Backend API: http://localhost:3000
 - Management API: http://localhost:3500
+- Items Gateway: http://localhost:5000/items?wsdl
 
 Note: The Adapter API (Port 4000) is only accessible internally within the Docker network and is not exposed to the host machine.
 
@@ -207,6 +225,24 @@ docker-compose -f docker-compose-mock.yml up --build
 To stop the services and run:
 ```bash
 docker-compose -f docker-compose-mock.yml down -v
+```
+
+## Items Gateway
+
+The Items Gateway provides a SOAP interface with the following operations:
+- GetItem: Retrieve a single item by ID
+- GetItems: Retrieve a paginated list of items
+
+Example SOAP request for GetItem:
+```xml
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:exam="http://example.com/items">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <exam:GetItem>
+         <id>1</id>
+      </exam:GetItem>
+   </soapenv:Body>
+</soapenv:Envelope>
 ```
 
 ## Possible Test Ideas

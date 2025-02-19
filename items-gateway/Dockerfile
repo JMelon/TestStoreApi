@@ -8,5 +8,5 @@ RUN npm install --only=production
 COPY . .
 
 USER node
-EXPOSE 4000
+EXPOSE 5000
 CMD ["node", "index.js"]
