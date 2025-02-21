@@ -492,6 +492,34 @@ app.post('/payment', authMiddleware, (req, res) => {
   res.json({ message: 'Payment successful' });
 });
 
+/**
+ * @swagger
+ * /health:
+ *   get:
+ *     summary: Check API health status
+ *     description: Returns the health status of the API
+ *     responses:
+ *       200:
+ *         description: API is healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: "ok"
+ *                 timestamp:
+ *                   type: string
+ *                   example: "2024-01-01T12:00:00.000Z"
+ */
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Middleware to handle unsupported methods
 app.use((req, res, next) => {
   res.status(405).json({ error: 'Method Not Allowed' });
