@@ -326,7 +326,19 @@ app.post('/cart', authMiddleware, async (req, res) => {
 
     global.carts = global.carts || {};
     global.carts[req.username] = global.carts[req.username] || [];
-    global.carts[req.username].push({ itemId, quantity });
+    
+    // Check if item already exists in cart
+    const existingItemIndex = global.carts[req.username].findIndex(
+      item => Number(item.itemId) === itemId
+    );
+
+    if (existingItemIndex !== -1) {
+      // Update quantity if item already exists
+      global.carts[req.username][existingItemIndex].quantity += quantity;
+    } else {
+      // Add new item if it doesn't exist
+      global.carts[req.username].push({ itemId, quantity });
+    }
 
     res.json({ message: 'Item added to cart', cart: global.carts[req.username] });
 
